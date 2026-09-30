@@ -16,6 +16,8 @@ module RecordingStudio
         depth: "The sitemap depth limit was reached",
         limit: "The sitemap limit was reached"
       }.freeze
+      RESTRICTED_SITEMAP = [401, 403].freeze
+      REFUSED_ROBOTS = [401, 403, 418, 429].freeze
 
       def initialize
         @sitemaps = []
@@ -53,13 +55,31 @@ module RecordingStudio
         record(ERROR_CODES.fetch(error.class, :fetch), error.message, url)
       end
 
-      def record(code, message, url)
-        @errors << FindingError.new(code: code, message: message, url: url)
+      def record_sitemap_failure(status, url)
+        code, message = sitemap_failure(status)
+        record(code, message, url, status: status)
+      end
+
+      def record_robots_failure(status, url)
+        message = REFUSED_ROBOTS.include?(status) ? "robots.txt refused the request" : "robots.txt could not be read"
+        record(:robots, message, url, status: status)
+      end
+
+      def record(code, message, url, status: nil)
+        @errors << FindingError.new(code: code, message: message, url: url, status: status)
       end
 
       def to_result(site_url)
         pages = @urls.map { |url, last_modified_at| IndexedUrl.new(url: url, last_modified_at: last_modified_at) }
         Result.new(site_url: site_url, sitemaps: @sitemaps, urls: pages, errors: @errors)
+      end
+
+      private
+
+      def sitemap_failure(status)
+        return [:forbidden, "The sitemap is restricted"] if RESTRICTED_SITEMAP.include?(status)
+
+        [:http, "The sitemap request failed"]
       end
     end
   end

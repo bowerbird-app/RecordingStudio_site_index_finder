@@ -113,7 +113,7 @@ A missing sitemap, a broken child file, or a site that cannot be reached does no
 
 `result.url_count` is `result.urls.size`.
 
-`result.errors` is an array of `FindingError` objects. Each one has `code`, `message`, and `url`.
+`result.errors` is an array of `FindingError` objects. Each one has `code`, `message`, `url`, and `status`. `status` is the HTTP status from that response. It is `nil` when the error did not come from a response.
 
 `result.status` is `:found`, `:partial`, `:empty`, or `:failed`.
 
@@ -191,6 +191,9 @@ Web Search is not used. A `site:` query is not a sitemap.
 | `robots.txt` has no `Sitemap` lines | Conventional sitemap paths are tried |
 | `robots.txt` is HTML or another non-robots body | An error is recorded and conventional paths are tried |
 | One child sitemap is malformed, missing, or too large | That error is recorded and the other files are kept |
+| A sitemap returns 401 or 403 | The error code is `forbidden` and `status` is that HTTP status |
+| A sitemap returns another error status | The error code is `http` and `status` is that HTTP status |
+| `robots.txt` returns 401, 403, 418, or 429 | The error code is `robots`, the message says the request was refused, and `status` is that HTTP status |
 | A child URL points at a private address | That error is recorded and the walk continues |
 | The sitemap graph loops | Each sitemap URL is fetched once |
 | The depth or count limit is hit | One limit error is recorded and the walk stops |

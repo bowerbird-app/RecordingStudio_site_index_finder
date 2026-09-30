@@ -45,9 +45,11 @@ module RecordingStudio
       end
 
       def collect_declarations(site_url, url, response)
-        return @findings.record(:robots, "robots.txt could not be read", url) if unreadable_robots?(response)
+        return @findings.record_robots_failure(response.status, url) if unreadable_robots?(response)
         return if response.status != 200
-        return @findings.record(:robots, "robots.txt was not a robots file", url) if Robots.disguised?(response.body)
+        if Robots.disguised?(response.body)
+          return @findings.record(:robots, "robots.txt was not a robots file", url, status: response.status)
+        end
 
         Robots.sitemap_urls(response.body).each { |loc| enqueue(site_url, loc, 0) }
       end
@@ -88,8 +90,8 @@ module RecordingStudio
       end
 
       def handle_response(item, response)
-        return missing_sitemap(item) if response.status == 404
-        return @findings.record(:http, "The sitemap request failed", item[:url]) unless success?(response)
+        return missing_sitemap(item, response.status) if response.status == 404
+        return @findings.record_sitemap_failure(response.status, item[:url]) unless success?(response)
 
         store(item[:url], SitemapDocument.parse(response.body), item[:depth])
       end
@@ -98,10 +100,10 @@ module RecordingStudio
         response.status.between?(200, 299)
       end
 
-      def missing_sitemap(item)
+      def missing_sitemap(item, status)
         return if item[:conventional]
 
-        @findings.record(:missing, "The sitemap was not found", item[:url])
+        @findings.record(:missing, "The sitemap was not found", item[:url], status: status)
       end
 
       def store(url, document, depth)

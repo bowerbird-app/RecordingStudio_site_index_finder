@@ -61,6 +61,19 @@ class SiteIndexFinderHomeTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Found"
   end
 
+  test "a restricted sitemap shows the status" do
+    RecordingStudio::SiteIndexFinder.configuration.transport = restricted_site
+
+    with_public_dns do
+      get root_path, params: { url: "https://example.com" }
+    end
+
+    assert_response :success
+    assert_includes response.body, "forbidden"
+    assert_includes response.body, "The sitemap is restricted"
+    assert_includes response.body, "403"
+  end
+
   test "an unsafe url shows the rejection" do
     get root_path, params: { url: "http://127.0.0.1" }
 
@@ -109,6 +122,27 @@ class SiteIndexFinderHomeTest < ActionDispatch::IntegrationTest
         status: spec[:status],
         body: spec[:body],
         headers: spec[:headers] || {},
+        location: nil,
+        address: hop.fetch(:address)
+      }
+    end
+  end
+
+  def restricted_site
+    lambda do |hop|
+      url = hop.fetch(:url)
+      status = if url.end_with?("/sitemap.xml")
+                 403
+               elsif url.end_with?(".xml")
+                 404
+               else
+                 200
+               end
+      body = url.end_with?("/robots.txt") ? "Sitemap: https://example.com/sitemap.xml" : "home"
+      {
+        status: status,
+        body: body,
+        headers: {},
         location: nil,
         address: hop.fetch(:address)
       }

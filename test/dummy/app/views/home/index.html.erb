@@ -75,10 +75,13 @@
     <% if @result.errors.any? %>
       <%= render FlatPack::PageTitle::Component.new(title: "Errors", variant: :h3) %>
       <%= render FlatPack::Table::Component.new(
-        data: @result.errors.map { |error| { code: error.code.to_s, message: error.message, url: error.url } },
+        data: @result.errors.map { |error|
+          { code: error.code.to_s, status: error.status, message: error.message, url: error.url }
+        },
         class: "text-sm"
       ) do |table| %>
         <% table.column(title: "Code") { |row| row[:code] } %>
+        <% table.column(title: "Status") { |row| row[:status] } %>
         <% table.column(title: "Message") { |row| row[:message] } %>
         <% table.column(title: "URL") { |row| row[:url] } %>
       <% end %>

@@ -139,6 +139,7 @@ class SiteIndexFinderTest < Minitest::Test
 
     assert_equal ["https://example.com/a"], result.urls.map(&:url)
     assert_equal :robots, result.errors.first.code
+    assert_equal 200, result.errors.first.status
     assert_equal :partial, result.status
   end
 
@@ -166,6 +167,7 @@ class SiteIndexFinderTest < Minitest::Test
     assert_equal ["https://example.com/good"], result.urls.map(&:url)
     assert_equal :malformed_xml, result.errors.first.code
     assert_equal "https://example.com/bad.xml", result.errors.first.url
+    assert_nil result.errors.first.status
   end
 
   def test_declared_sitemap_404_continues_to_a_conventional_sitemap
@@ -178,6 +180,86 @@ class SiteIndexFinderTest < Minitest::Test
 
     assert_equal ["https://example.com/a"], result.urls.map(&:url)
     assert_equal :missing, result.errors.first.code
+    assert_equal 404, result.errors.first.status
+  end
+
+  def test_restricted_sitemap_records_forbidden_and_the_status
+    result = find_site(
+      "https://example.com/" => page,
+      "https://example.com/robots.txt" => text("Sitemap: https://example.com/sitemap.xml"),
+      "https://example.com/sitemap.xml" => { status: 403, body: "Sitemap Restricted" },
+      "https://example.com/sitemap_index.xml" => { status: 404, body: "" },
+      "https://example.com/sitemap-index.xml" => { status: 404, body: "" }
+    )
+    error = result.errors.first
+    payload = JSON.parse(JSON.generate(result.to_h)).fetch("errors").first
+
+    assert_equal :failed, result.status
+    assert_equal 1, result.errors.size
+    assert_equal :forbidden, error.code
+    assert_equal "The sitemap is restricted", error.message
+    assert_equal 403, error.status
+    assert_equal "https://example.com/sitemap.xml", error.url
+    assert_equal "forbidden", payload.fetch("code")
+    assert_equal 403, payload.fetch("status")
+  end
+
+  def test_unauthorized_sitemap_is_restricted
+    result = find_site(
+      "https://example.com/" => page,
+      "https://example.com/robots.txt" => text("Sitemap: https://example.com/sitemap.xml"),
+      "https://example.com/sitemap.xml" => { status: 401, body: "" },
+      "https://example.com/sitemap_index.xml" => { status: 404, body: "" },
+      "https://example.com/sitemap-index.xml" => { status: 404, body: "" }
+    )
+
+    assert_equal :forbidden, result.errors.first.code
+    assert_equal 401, result.errors.first.status
+  end
+
+  def test_other_sitemap_failure_keeps_the_http_status
+    result = find_site(
+      "https://example.com/" => page,
+      "https://example.com/robots.txt" => text("Sitemap: https://example.com/sitemap.xml"),
+      "https://example.com/sitemap.xml" => { status: 406, body: "" },
+      "https://example.com/sitemap_index.xml" => { status: 404, body: "" },
+      "https://example.com/sitemap-index.xml" => { status: 404, body: "" }
+    )
+
+    assert_equal :http, result.errors.first.code
+    assert_equal "The sitemap request failed", result.errors.first.message
+    assert_equal 406, result.errors.first.status
+    assert_equal :failed, result.status
+  end
+
+  def test_robots_refusal_records_the_status
+    result = find_site(
+      "https://example.com/" => page,
+      "https://example.com/robots.txt" => { status: 418, body: "teapot" },
+      "https://example.com/sitemap.xml" => { status: 404, body: "" },
+      "https://example.com/sitemap_index.xml" => { status: 404, body: "" },
+      "https://example.com/sitemap-index.xml" => { status: 404, body: "" }
+    )
+
+    assert_equal :robots, result.errors.first.code
+    assert_equal "robots.txt refused the request", result.errors.first.message
+    assert_equal 418, result.errors.first.status
+    assert_equal "https://example.com/robots.txt", result.errors.first.url
+    assert_empty result.sitemaps
+  end
+
+  def test_robots_server_error_records_the_status
+    result = find_site(
+      "https://example.com/" => page,
+      "https://example.com/robots.txt" => { status: 500, body: "" },
+      "https://example.com/sitemap.xml" => { status: 404, body: "" },
+      "https://example.com/sitemap_index.xml" => { status: 404, body: "" },
+      "https://example.com/sitemap-index.xml" => { status: 404, body: "" }
+    )
+
+    assert_equal :robots, result.errors.first.code
+    assert_equal "robots.txt could not be read", result.errors.first.message
+    assert_equal 500, result.errors.first.status
   end
 
   def test_site_with_no_sitemap_returns_an_empty_result
@@ -353,6 +435,7 @@ class SiteIndexFinderTest < Minitest::Test
 
     assert_equal ["https://example.com/a"], result.urls.map(&:url)
     assert_equal :too_large, result.errors.first.code
+    assert_nil result.errors.first.status
   end
 
   def test_sitemap_count_limit_stops_the_graph

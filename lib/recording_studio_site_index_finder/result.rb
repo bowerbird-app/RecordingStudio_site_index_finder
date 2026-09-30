@@ -14,9 +14,13 @@ module RecordingStudio
       end
     end
 
-    FindingError = Data.define(:code, :message, :url) do
+    FindingError = Data.define(:code, :message, :url, :status) do
+      def initialize(code:, message:, url:, status: nil)
+        super
+      end
+
       def to_h
-        { "code" => code.to_s, "message" => message, "url" => url }
+        { "code" => code.to_s, "message" => message, "url" => url, "status" => status }
       end
     end
 
