@@ -1,0 +1,15 @@
+development:
+  open_timeout: 5
+  read_timeout: 10
+  max_redirects: 5
+  max_response_bytes: 5000000
+  max_sitemap_depth: 4
+  max_sitemap_count: 50
+
+production:
+  open_timeout: 5
+  read_timeout: 10
+  max_redirects: 5
+  max_response_bytes: 5000000
+  max_sitemap_depth: 4
+  max_sitemap_count: 50

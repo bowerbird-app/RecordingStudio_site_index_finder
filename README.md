@@ -1,170 +1,239 @@
-# GemTemplate
+# Site Index Finder
 
-Internal template for building Rails engine addons on top of Recording Studio 4.x.
-
-## What's Included
-
-- **Recording Studio** 4.x gem pinned and configured
-- **Devise** authentication with a pre-seeded admin user
-- **Workspace**, **Folder**, and **Page** recordables seeded into the dummy host app
-- **FlatPack** UI component library for all views
-- **Dummy app** (`test/dummy/`) with a FlatPack sign-in screen, a home page on Recording Studio's default layout, mounted Recording Studio routes, and FlatPack's built-in rounded theme
-
-Authenticated dummy pages use Recording Studio's shared default layout (`RecordingStudio::UsesDefaultLayout`) plus FlatPack CSS and JS. Devise keeps its own sign-in layout. Dummy `/docs/*` pages stay in the dummy app as a host-app sandbox; they are not the product README.
-
-## Quick Start
-
-### Cursor Cloud Agent (Recommended)
-
-A Cloud Agent boots this repo into a ready-to-use dev environment with no manual steps. The setup lives in `.cursor/`:
-
-- `install.sh` provisions Ruby (pinned by `.ruby-version`), PostgreSQL 16, all gems, the seeded dummy database, and compiled CSS at build time, then fetches Recording Studio skills.
-- `start.sh` starts PostgreSQL on every boot.
-- `environment.json` runs the `rails-server` and `tailwind-watch` terminals and exposes port 3000.
-
-Open port 3000 and sign in at `/users/sign_in`. No environment variables are required — the dummy app's `database.yml` defaults match the provisioned PostgreSQL cluster.
-
-### GitHub Codespaces
-
-1. Click **Code** → **Codespaces** → **Create codespace**
-2. Wait for setup to complete
-3. Run:
-   ```bash
-   cd test/dummy
-   bin/rails db:setup
-   bin/dev
-   ```
-4. Open port 3000 — you'll land on the dummy app home page and can sign in at `/users/sign_in`
-
-The dummy app is intended as a host-app validation surface for authentication, FlatPack rendering, Tailwind source scanning, and Recording Studio route wiring.
-
-### Login Credentials
-
-| Field    | Value             |
-|----------|-------------------|
-| Email    | admin@admin.com   |
-| Password | Password          |
-
-The login form is prefilled with these credentials for fast access.
-
-### Useful Routes
-
-- `/` — dummy app home page
-- `/users/sign_in` — Devise sign-in page
-- `/recording_studio` — redirect to `/` while the mounted Recording Studio engine remains data/API-focused
-- `/docs/install`, `/docs/config`, `/docs/recordable_types`, `/docs/recordings_tree`, `/docs/gem_views`, `/docs/methods` — dummy-only starter pages
-
-The home page in `test/dummy/app/views/home/index.html.erb` is a starting point for a minimal demo of the gem's primary behavior. Keep deeper explanations on the dummy docs pages, not in this README.
-
-## Architecture
-
-### Root Recording Pattern
-
-This template follows Recording Studio's root recording pattern:
-
-- **Workspace** is the top-level recordable
-- **Folder** and **Page** demonstrate nested recordables under the workspace root
-- Each configured recordable declares `recording_studio_recordable(...)`; strict declaration validation stays enabled
-- A root `RecordingStudio::Recording` wraps the Workspace
-- `Current.actor` is set from `current_user` (Devise) in `ApplicationController`
-
-### Extending Recording Studio
-
-To add new recordable types:
-
-1. Create your model (e.g., `Page`, `Comment`)
-2. Register it in `config/initializers/recording_studio.rb`:
-   ```ruby
-   RecordingStudio.configure do |config|
-     config.recordable_types = ["Workspace", "YourNewType"]
-   end
-   ```
-3. Declare whether the model can be a root and which parents may contain it:
-   ```ruby
-   class YourNewType < ApplicationRecord
-     recording_studio_recordable label: "Your new type",
-                                 root: false,
-                                 allowed_parent_types: ["Workspace", "Folder"]
-   end
-   ```
-4. Validate declarations and create recordings under the root:
-   ```ruby
-   RecordingStudio.validate_recordable_declarations!
-   root_recording = RecordingStudio.root_recording_for(workspace)
-   root_recording.record(YourNewType) do |record|
-     record.title = "Example"
-   end
-   ```
-
-### Recordable Declarations
-
-Every configured ActiveRecord recordable type must declare its hierarchy rules. Declarations are required; they are not version-specific.
-
-- `Workspace` declares `root: true`
-- `Folder` and `Page` declare `root: false, allowed_parent_types: ["Workspace", "Folder"]`
-- `config.require_recordable_declarations = true` remains enabled in the dummy app initializer
-
-Useful console checks:
+Recording Studio Site Index Finder discovers the sitemap files a public website publishes and returns the URLs those files list.
 
 ```ruby
-RecordingStudio.validate_recordable_declarations!
-RecordingStudio.root_recordable_types
-RecordingStudio.allowed_parent_types_for("Page")
+result = RecordingStudio::SiteIndexFinder.find("https://example.com")
+result.site_url
+result.sitemaps
+result.urls
+result.url_count
+result.errors
+result.to_h
 ```
 
-### Capabilities
+## What this gem does
 
-Capability mixins are opt-in. Installing this gem does not enable mixins on host types.
+Give it a website URL. It resolves that URL to a public origin, reads `robots.txt`, and follows the sitemap files the site declares. When `robots.txt` has no usable sitemap, it tries three conventional paths.
 
-The dummy Workspace enables Accessible because that addon is bundled:
+The result is a value object. Another gem can store that object later. This gem does not store it.
+
+## What this gem does not do
+
+This gem is a finder. It does not crawl HTML, classify pages, extract articles, build search indexes, match press coverage, or call an LLM.
+
+It also does not know about Publications or Channels. Pass a site URL. Read the result.
+
+## Our sitemap and their sitemap
+
+Recording Studio Sitemaps writes the sitemap for an app we run.
+
+```text
+RecordingStudio Sitemaps
+our records
+then our sitemap.xml
+```
+
+Site Index Finder reads the sitemap another site already published.
+
+```text
+RecordingStudio Site Index Finder
+external website
+then discover published sitemap infrastructure
+then return URLs
+```
+
+`SiteIndexFinder` discovers. A `SiteIndex` record, if you add one later, belongs in the gem that stores it.
+
+## Installation
+
+Add the gem to the host app. `recording_studio` is not on RubyGems, so the host pins it from GitHub the same way this repo does.
 
 ```ruby
-RecordingStudio.enable_capability(:accessible, on: Workspace)
+gem "recording_studio_site_index_finder", github: "bowerbird-app/RecordingStudio_site_index_finder"
+gem "recording_studio", github: "bowerbird-app/RecordingStudio", tag: "v4.2.0"
 ```
 
-The template also ships one example mixin that uses core 4.2.0's `include_for` factory:
+Then install the engine.
+
+```bash
+bin/rails generate recording_studio_site_index_finder:install
+```
+
+The generator mounts the engine, copies an initializer, and can add a YAML file. The finder does not add database tables.
+
+The dummy app in this repo also pins FlatPack `v0.1.177`, Recording Studio Accessible `v0.9.1`, and Recording Studio Root Switchable `v0.5.0`.
+
+## Configuration
 
 ```ruby
-include RecordingStudio::Capabilities::Example.to(label: "dummy workspace")
+RecordingStudio::SiteIndexFinder.configure do |config|
+  config.open_timeout = 5
+  config.read_timeout = 10
+  config.max_redirects = 5
+  config.max_response_bytes = 5_000_000
+  config.max_sitemap_depth = 4
+  config.max_sitemap_count = 50
+  config.instrumentation_enabled = true
+end
 ```
 
-`.to` wraps `RecordingStudio::Capabilities.include_for`. It does not add a fourth verb and it does not call `enable_capability` / `set_capability_options` itself. Folder and Page stay without the example mixin.
+Those are the defaults. The write timeout stays at 5 seconds. The user agent is `RecordingStudioSiteIndexFinder/#{version}`.
 
-Use core `RecordingStudio::Hooks` and `RecordingStudio::Services::BaseService`. Do not copy those classes into a new addon.
+Depth `0` is the first sitemap file. A child sitemap is one level deeper. The count limit includes every sitemap file the finder fetches, both indexes and URL sets.
 
-### FlatPack UI Components
+You can also set the same keys in `config/recording_studio_site_index_finder.yml` or `config.x.recording_studio_site_index_finder`. An initializer runs after those and wins.
 
-All views use FlatPack ViewComponents. Available components include:
+## Public API
 
-- `FlatPack::Button::Component` — Buttons (`:primary`, `:secondary`, `:ghost`)
-- `FlatPack::Card::Component` — Cards (`:default`, `:elevated`, `:outlined`)
-- `FlatPack::Alert::Component` — Alerts (`:success`, `:error`, `:warning`, `:info`)
-- `FlatPack::Badge::Component` — Status badges
-- `FlatPack::Table::Component` — Data tables
-- `FlatPack::TextInput::Component`, `EmailInput`, `PasswordInput` — Form inputs
-- `FlatPack::PageNav::Component` — Default-layout page navigation
-- `FlatPack::PageTitle::Component` — Page titles
+```ruby
+result = RecordingStudio::SiteIndexFinder.find("https://example.com/article/example")
+```
 
-Use the live FlatPack demo app at [flatpack.bowerbird.io](https://flatpack.bowerbird.io/) as the approved UI reference for current shared patterns. Its component table is the fastest way to discover available FlatPack components before introducing new custom UI.
+Accepted inputs include a bare host, a `www` host, an origin, and a page URL. The finder reduces the input to an origin and follows public redirects.
 
-See the [FlatPack README](https://github.com/bowerbird-app/flatpack) for full documentation.
+```text
+example.com
+www.example.com
+https://example.com
+https://example.com/article/example
+```
 
-## Tech Stack
+`find` raises `RecordingStudio::SiteIndexFinder::InvalidUrlError` when the input is blank or not HTTP or HTTPS. It raises `RecordingStudio::SiteIndexFinder::UnsafeUrlError` when the input, or a redirect of that input, points at a blocked host or address.
 
-| Component       | Version |
-|-----------------|---------|
-| Ruby            | 3.3+    |
-| Rails           | 8.1+    |
-| PostgreSQL      | 16      |
-| TailwindCSS     | 4       |
-| RecordingStudio | 4.x (`~> 4.2` in the gemspec; dummy GitHub tag `v4.2.0`) |
-| Accessible      | dummy GitHub tag `v0.9.1` |
-| Root Switchable | dummy GitHub tag `v0.5.0` |
-| FlatPack        | dummy GitHub tag `v0.1.177` |
-| Devise          | latest  |
+A missing sitemap, a broken child file, or a site that cannot be reached does not raise. Those outcomes come back on the result.
 
-The dummy Gemfile keeps `github:` sources so Bundler can fetch those gems. The gemspec still pins `recording_studio` to `~> 4.2` so copied addons declare the core dependency even when GitHub is the fetch source.
+## Result object
 
-## Documentation
+`result.site_url` is the resolved origin, with a trailing slash.
 
-The original gem template documentation is preserved in `docs/gem_template/` as architectural reference material. Use it as background on the engine conventions; this README and the dummy app are the source of truth for the Recording Studio addon workflow.
+`result.sitemaps` is an array of `Sitemap` objects. Each one has `url` and `type`, either `:index` or `:urlset`.
+
+`result.urls` is an array of `IndexedUrl` objects. Each one has `url` and `last_modified_at`. `last_modified_at` is the publisher's string, or `nil` when the sitemap omits `lastmod`.
+
+`result.url_count` is `result.urls.size`.
+
+`result.errors` is an array of `FindingError` objects. Each one has `code`, `message`, `url`, and `status`. `status` is the HTTP status from that response. It is `nil` when the error did not come from a response.
+
+`result.status` is `:found`, `:partial`, `:empty`, or `:failed`.
+
+`result.to_h` uses string keys. `JSON.generate(result.to_h)` works. Sitemap type and error code are strings in that hash.
+
+## Sitemap discovery
+
+The finder does this in order.
+
+1. Normalize the input to an HTTP or HTTPS origin.
+2. `GET` that origin and follow redirects. The final origin is `site_url`.
+3. `GET {site_url}robots.txt`.
+4. Read every `Sitemap:` line. Blank lines and `#` comments are ignored. The match is case insensitive.
+5. Fetch those sitemap URLs. When at least one parses, stop looking for conventional paths.
+6. When none parse, try `/sitemap.xml`, then `/sitemap_index.xml`, then `/sitemap-index.xml`. Stop at the first one that parses.
+
+A sitemap index lists more sitemap URLs. The finder fetches those, including an index nested inside another index. Child addresses are resolved against the parent sitemap URL.
+
+The walk is a queue. A sitemap URL is fetched once. A page URL is returned once, and the first `lastmod` wins. Fragments are removed. Paths, query strings, schemes, and subdomains stay as the publisher wrote them.
+
+## Supported sitemap types
+
+URL set:
+
+```xml
+<urlset>
+  <url>
+    <loc>https://example.com/article-one</loc>
+    <lastmod>2026-09-20</lastmod>
+  </url>
+</urlset>
+```
+
+Sitemap index:
+
+```xml
+<sitemapindex>
+  <sitemap>
+    <loc>https://example.com/posts.xml</loc>
+  </sitemap>
+</sitemapindex>
+```
+
+The default sitemap namespace is accepted. `loc` is required for a page entry. `lastmod` is optional. Other sitemap tags are ignored.
+
+A gzip body is inflated when the bytes are gzip. Net::HTTP already inflates `Content-Encoding: gzip`, so a decoded body is left as it arrived. Sitemap and robots bodies are read as UTF-8, including bodies that arrived as binary. A leading byte-order mark is removed.
+
+## Security
+
+Every request is checked before the socket opens.
+
+- HTTP and HTTPS only
+- No URL userinfo
+- Localhost and `*.localhost` rejected
+- Private, loopback, link-local, and documentation ranges rejected
+- Cloud metadata addresses rejected, including `169.254.169.254`, `metadata.google.internal`, and `metadata.goog`
+- DNS answers are checked. One private address rejects the host
+- The connection uses the address from that check
+- Each redirect is checked again
+- TLS certificates are verified
+- Open, read, and write timeouts apply to each hop
+- Response bodies are capped
+- Redirects are capped
+
+Web Reader does not expose a public fetch for `robots.txt` or sitemap XML. `RecordingStudio::WebReader.read` accepts HTML pages. This gem keeps its own fetch path and copies those checks. It does not call Web Reader internals.
+
+Web Search is not used. A `site:` query is not a sitemap.
+
+## Failure behaviour
+
+| Situation | Result |
+| --- | --- |
+| Unsafe or invalid input | `find` raises |
+| `robots.txt` is missing | Conventional sitemap paths are tried |
+| `robots.txt` has no `Sitemap` lines | Conventional sitemap paths are tried |
+| `robots.txt` is HTML or another non-robots body | An error is recorded and conventional paths are tried |
+| One child sitemap is malformed, missing, or too large | That error is recorded and the other files are kept |
+| A sitemap returns 401 or 403 | The error code is `forbidden` and `status` is that HTTP status |
+| A sitemap returns another error status | The error code is `http` and `status` is that HTTP status |
+| `robots.txt` returns 401, 403, 418, or 429 | The error code is `robots`, the message says the request was refused, and `status` is that HTTP status |
+| A child URL points at a private address | That error is recorded and the walk continues |
+| The sitemap graph loops | Each sitemap URL is fetched once |
+| The depth or count limit is hit | One limit error is recorded and the walk stops |
+| No sitemap exists | A result with zero URLs and zero errors |
+
+## Instrumentation
+
+Each call emits `find.recording_studio_site_index_finder` when instrumentation is enabled.
+
+```ruby
+{
+  schema_version: 1,
+  host: "example.com",
+  success: true,
+  request_count: 3,
+  sitemap_count: 1,
+  url_count: 2,
+  error_type: nil,
+  duration_ms: 40
+}
+```
+
+`success` is true when `find` returns a result, including a result that lists child errors. `error_type` is the first error code, or the exception class name when `find` raises. `host` is the hostname only.
+
+The event does not include the page URL, XML, `robots.txt`, headers, or response bodies.
+
+## Dummy app
+
+`test/dummy` is a host app for checking the gem. Sign in at `/users/sign_in` with `admin@admin.com` and `Password`. The home page takes a site URL and runs `RecordingStudio::SiteIndexFinder.find`. It shows the supplied URL, the resolved origin, the status, the sitemap files, the URL count, the discovered URLs, `lastmod` when present, and the errors.
+
+```bash
+cd test/dummy
+bin/rails db:setup
+bin/dev
+```
+
+## Tests
+
+```bash
+bundle exec rake test
+```
+
+The finder tests stub DNS and HTTP. They cover one sitemap, several `Sitemap` lines, indexes, nested indexes, duplicate files, duplicate URLs, a missing or empty or unreadable `robots.txt`, bad XML, a missing sitemap, a site with no sitemap, redirects, unsafe URLs, loops, oversized bodies, and the depth and count limits.
