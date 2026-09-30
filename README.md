@@ -159,7 +159,7 @@ Sitemap index:
 
 The default sitemap namespace is accepted. `loc` is required for a page entry. `lastmod` is optional. Other sitemap tags are ignored.
 
-A gzip body is inflated when the bytes are gzip. Net::HTTP already inflates `Content-Encoding: gzip`, so a decoded body is left as it arrived.
+A gzip body is inflated when the bytes are gzip. Net::HTTP already inflates `Content-Encoding: gzip`, so a decoded body is left as it arrived. Sitemap and robots bodies are read as UTF-8, including bodies that arrived as binary. A leading byte-order mark is removed.
 
 ## Security
 

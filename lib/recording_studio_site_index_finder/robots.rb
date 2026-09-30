@@ -8,12 +8,11 @@ module RecordingStudio
       module_function
 
       def disguised?(body)
-        body.to_s.lstrip.start_with?("<")
+        Text.utf8(body).lstrip.start_with?("<")
       end
 
       def sitemap_urls(body)
-        text = body.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
-        text.each_line.filter_map { |line| sitemap_url(line) }
+        Text.utf8(body).each_line.filter_map { |line| sitemap_url(line) }
       end
 
       def sitemap_url(line)

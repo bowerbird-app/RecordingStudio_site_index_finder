@@ -16,7 +16,7 @@ module RecordingStudio
       end
 
       def initialize(xml)
-        @xml = xml.to_s.sub(/\A\uFEFF/, "")
+        @xml = Text.utf8(xml)
       end
 
       def parse
@@ -26,7 +26,7 @@ module RecordingStudio
         when "sitemapindex" then Document.new(type: :index, children: locations_under(root, "sitemap"), pages: [])
         else raise ParseError, "The sitemap root was not recognized"
         end
-      rescue REXML::ParseException
+      rescue REXML::ParseException, EncodingError
         raise ParseError, "The sitemap XML could not be parsed"
       end
 

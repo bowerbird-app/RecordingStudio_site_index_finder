@@ -49,6 +49,18 @@ class SiteIndexFinderHomeTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "2026-09-20"
   end
 
+  test "a binary sitemap body renders the discovered urls" do
+    RecordingStudio::SiteIndexFinder.configuration.transport = binary_site
+
+    with_public_dns do
+      get root_path, params: { url: "https://example.com" }
+    end
+
+    assert_response :success
+    assert_includes response.body, "https://example.com/a"
+    assert_includes response.body, "Found"
+  end
+
   test "an unsafe url shows the rejection" do
     get root_path, params: { url: "http://127.0.0.1" }
 
@@ -77,6 +89,30 @@ class SiteIndexFinderHomeTest < ActionDispatch::IntegrationTest
   def prepare_workspace
     workspace = Workspace.find_or_create_by!(name: "Site Index Workspace")
     RecordingStudio.root_recording_for(workspace)
+  end
+
+  def binary_site
+    xml = "\xEF\xBB\xBF".b + "<urlset><url><loc>https://example.com/a</loc></url></urlset>".b
+    map = {
+      "https://example.com/" => { status: 200, body: "home" },
+      "https://example.com/robots.txt" => { status: 200, body: "Sitemap: https://example.com/sitemap.xml".b },
+      "https://example.com/sitemap.xml" => {
+        status: 200,
+        body: xml,
+        headers: { "content-type" => "application/xml" }
+      }
+    }
+
+    lambda do |hop|
+      spec = map.fetch(hop.fetch(:url))
+      {
+        status: spec[:status],
+        body: spec[:body],
+        headers: spec[:headers] || {},
+        location: nil,
+        address: hop.fetch(:address)
+      }
+    end
   end
 
   def scripted_site

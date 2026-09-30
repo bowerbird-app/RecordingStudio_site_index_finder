@@ -142,6 +142,18 @@ class SiteIndexFinderTest < Minitest::Test
     assert_equal :partial, result.status
   end
 
+  def test_binary_sitemap_body_is_read
+    body = "\xEF\xBB\xBF".b + urlset("https://example.com/a").b
+    result = find_site(
+      "https://example.com/" => page,
+      "https://example.com/robots.txt" => text("Sitemap: https://example.com/sitemap.xml"),
+      "https://example.com/sitemap.xml" => xml(body)
+    )
+
+    assert_equal ["https://example.com/a"], result.urls.map(&:url)
+    assert_empty result.errors
+  end
+
   def test_malformed_child_xml_does_not_drop_the_other_sitemap
     result = find_site(
       "https://example.com/" => page,

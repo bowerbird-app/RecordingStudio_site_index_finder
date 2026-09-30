@@ -38,6 +38,8 @@ module RecordingStudio
         url = URI.join(site_url, "robots.txt").to_s
         response = @client.get(url)
         collect_declarations(site_url, url, response)
+      rescue EncodingError
+        @findings.record(:robots, "robots.txt could not be read", url)
       rescue Error => e
         @findings.record_exception(e, url)
       end
@@ -79,6 +81,8 @@ module RecordingStudio
         handle_response(item, response)
       rescue SitemapDocument::ParseError => e
         @findings.record(:malformed_xml, e.message, item[:url])
+      rescue EncodingError
+        @findings.record(:malformed_xml, "The sitemap XML could not be parsed", item[:url])
       rescue Error => e
         @findings.record_exception(e, item[:url])
       end
