@@ -2,6 +2,8 @@
 
 This Rails app exists to validate the Recording Studio addon template in a real host application.
 
+The home page is the Site Index Finder check. Enter a public site URL and run Find site index.
+
 ## What It Covers
 
 - Devise authentication with a seeded admin user

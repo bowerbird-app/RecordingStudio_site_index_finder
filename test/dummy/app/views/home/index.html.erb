@@ -1,101 +1,87 @@
-<% dummy_page_nav(title: "Template Demo", back_url: root_path) %>
+<% dummy_page_nav(title: "Site index", back_url: root_path) %>
 
 <div class="flex w-full flex-col gap-6">
   <%= render FlatPack::PageTitle::Component.new(
-    title: "Template Demo",
-    subtitle: "This dummy app is the browser-facing demo surface for the template.",
+    title: "Site index",
+    subtitle: "Enter a public website. The finder reads its published sitemap files.",
     variant: :h1
   ) %>
 
-  <div class="grid gap-6 lg:grid-cols-2">
-    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-      <% card.header do %>
-        <%= render FlatPack::PageTitle::Component.new(
-          title: "What's working",
-          subtitle: "Core template capabilities already wired into the dummy app.",
-          variant: :h3,
-          class: "mb-0 pb-0"
-        ) %>
-      <% end %>
+  <%= form_with url: root_path, method: :get do %>
+    <div class="flex flex-col gap-4">
+      <%= render FlatPack::SearchInput::Component.new(
+        name: "url",
+        label: "Site URL",
+        value: params[:url]
+      ) %>
+      <%= render FlatPack::Button::Component.new(
+        text: "Find site index",
+        style: :primary,
+        type: :submit
+      ) %>
+    </div>
+  <% end %>
 
-      <% card.body do %>
-        <ul class="space-y-3 text-sm leading-6">
-          <li>Rails engine routes are mounted and responding.</li>
-          <li>PostgreSQL UUID-oriented migrations are included in the engine.</li>
-          <li>Tailwind sources can be wired into a host app through the install generator.</li>
-          <li>The dummy app exercises authentication, the Recording Studio default layout, and FlatPack.</li>
-        </ul>
-      <% end %>
-    <% end %>
+  <% if @failure %>
+    <%= render FlatPack::Alert::Component.new(style: :danger, description: @failure.message) %>
+  <% end %>
 
+  <% if @result %>
     <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-      <% card.header do %>
-        <%= render FlatPack::PageTitle::Component.new(
-          title: "Next steps",
-          subtitle: "The usual first moves when turning the template into a real addon.",
-          variant: :h3,
-          class: "mb-0 pb-0"
-        ) %>
-      <% end %>
-
       <% card.body do %>
-        <ol class="space-y-3 text-sm leading-6 list-decimal pl-5">
-          <li>Run <code>bin/rename_gem your_addon_name</code> when you are ready to rename the engine.</li>
-          <li>Replace the sample migration with your addon tables and install them into the host app.</li>
-          <li>Configure Recording Studio recordable types and capabilities in the host app initializer.</li>
-          <li>Use the dummy app to validate layout, asset scanning, and authentication flows.</li>
-        </ol>
+        <dl class="grid gap-2 text-sm">
+          <div><dt class="font-semibold">Supplied URL</dt><dd><%= @supplied_url %></dd></div>
+          <div><dt class="font-semibold">Resolved site URL</dt><dd><%= @result.site_url %></dd></div>
+          <div><dt class="font-semibold">Status</dt><dd><%= site_index_status_label(@result) %></dd></div>
+          <div><dt class="font-semibold">Sitemap files</dt><dd><%= @result.sitemaps.size %></dd></div>
+          <div><dt class="font-semibold">URLs found</dt><dd><%= @result.url_count %></dd></div>
+        </dl>
       <% end %>
     <% end %>
 
-    <%= render FlatPack::Card::Component.new(style: :outlined) do |card| %>
-      <% card.header do %>
-        <%= render FlatPack::PageTitle::Component.new(
-          title: "FlatPack usage",
-          subtitle: "This page uses FlatPack components for its primary UI structure.",
-          variant: :h3,
-          class: "mb-0 pb-0"
-        ) %>
-      <% end %>
+    <% if @result.status == :empty %>
+      <%= render FlatPack::Alert::Component.new(
+        style: :info,
+        description: "No sitemap was found."
+      ) %>
+    <% end %>
 
-      <% card.body do %>
-        <p class="text-sm leading-6 text-(--surface-content-color)">
-          Use FlatPack cards, buttons, badges, inputs, and layout primitives as the default path for addon UI. Keep raw HTML for simple semantic content only.
-        </p>
-      <% end %>
-
-      <% card.footer do %>
-        <a href="https://github.com/bowerbird-app/flatpack"
-           target="_blank"
-           rel="noopener noreferrer"
-           class="inline-flex">
-          <%= render FlatPack::Button::Component.new(
-            text: "View FlatPack documentation",
-            style: :primary,
-            size: :md
-          ) %>
-        </a>
+    <% if @result.sitemaps.any? %>
+      <%= render FlatPack::PageTitle::Component.new(title: "Sitemap files", variant: :h3) %>
+      <%= render FlatPack::Table::Component.new(
+        data: @result.sitemaps.map { |sitemap| { url: sitemap.url, type: sitemap.type.to_s } },
+        class: "text-sm"
+      ) do |table| %>
+        <% table.column(title: "Sitemap") { |row| row[:url] } %>
+        <% table.column(title: "Type") { |row| row[:type] } %>
       <% end %>
     <% end %>
 
-    <%= render FlatPack::Card::Component.new(style: :default) do |card| %>
-      <% card.header do %>
-        <%= render FlatPack::PageTitle::Component.new(
-          title: "Install flow",
-          subtitle: "What the host app generator path covers.",
-          variant: :h3,
-          class: "mb-0 pb-0"
-        ) %>
+    <% if @result.urls.any? %>
+      <% shown = @result.urls.first(@preview_limit) %>
+      <%= render FlatPack::PageTitle::Component.new(title: "Discovered URLs", variant: :h3) %>
+      <% if @result.url_count > shown.size %>
+        <p class="text-sm">Showing <%= shown.size %> of <%= @result.url_count %>.</p>
       <% end %>
-
-      <% card.body do %>
-        <ul class="space-y-3 text-sm leading-6">
-          <li>Add the gem to your host app and run <code>bundle install</code>.</li>
-          <li>Run <code>rails generate gem_template:install</code> to mount the engine and add configuration.</li>
-          <li>Run <code>rails generate gem_template:migrations</code> to copy engine migrations into the host app.</li>
-          <li>Rebuild Tailwind if needed with <code>bin/rails tailwindcss:build</code>.</li>
-        </ul>
+      <%= render FlatPack::Table::Component.new(
+        data: shown.map { |page| { url: page.url, last_modified_at: page.last_modified_at } },
+        class: "text-sm"
+      ) do |table| %>
+        <% table.column(title: "URL") { |row| row[:url] } %>
+        <% table.column(title: "Last modified") { |row| row[:last_modified_at] } %>
       <% end %>
     <% end %>
-  </div>
+
+    <% if @result.errors.any? %>
+      <%= render FlatPack::PageTitle::Component.new(title: "Errors", variant: :h3) %>
+      <%= render FlatPack::Table::Component.new(
+        data: @result.errors.map { |error| { code: error.code.to_s, message: error.message, url: error.url } },
+        class: "text-sm"
+      ) do |table| %>
+        <% table.column(title: "Code") { |row| row[:code] } %>
+        <% table.column(title: "Message") { |row| row[:message] } %>
+        <% table.column(title: "URL") { |row| row[:url] } %>
+      <% end %>
+    <% end %>
+  <% end %>
 </div>
