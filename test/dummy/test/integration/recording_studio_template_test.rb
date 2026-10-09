@@ -21,6 +21,8 @@ class RecordingStudioTemplateTest < ActiveSupport::TestCase
 
     assert connection.column_exists?(:recording_studio_recordings, :root_recording_id)
     assert connection.table_exists?(:recording_studio_accesses)
+    assert connection.table_exists?(:recording_studio_access_invitations)
+    assert_equal :string, connection.columns_hash("recording_studio_accesses")["role"].type
     refute connection.table_exists?(:recording_studio_access_boundaries)
     refute connection.table_exists?(:recording_studio_device_sessions)
   end
