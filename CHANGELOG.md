@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Dummy Sign out `FlatPack::Button` now uses `href:` instead of `url:` so the page nav is a real link with `data-turbo-method="delete"` (FlatPack ≥ 0.1.177).
 - Bump dummy/root GitHub pin for Recording Studio `v4.2.0` → `v4.2.2`. Gemspec stays `~> 4.2`. FlatPack and other RecordingStudio* addon tags unchanged.
 
 ## [0.2.2] - 2026-09-11
