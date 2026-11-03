@@ -18,6 +18,24 @@ class RootSwitchDropdownTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "fixed inset-0"
   end
 
+  test "home page sign out is a delete link" do
+    user = User.find_or_create_by!(email: "sign-out-href-test@example.com") do |record|
+      record.password = "Password123!"
+      record.password_confirmation = "Password123!"
+    end
+
+    sign_in user
+
+    workspace = Workspace.create!(name: "Sign Out Workspace")
+    RecordingStudio.root_recording_for(workspace)
+
+    get root_path
+
+    assert_response :success
+    assert_select "a[href=?][data-turbo-method=delete]", destroy_user_session_path, text: /Sign out/
+    assert_select "button[url]", count: 0
+  end
+
   test "home page renders the root switch dropdown trigger" do
     user = User.find_or_create_by!(email: "root-switch-test@example.com") do |record|
       record.password = "Password123!"

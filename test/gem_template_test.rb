@@ -257,6 +257,14 @@ class GemTemplateTest < Minitest::Test
     refute_includes recordings_tree_view, "This tree is generated from RecordingStudio::Recording records"
   end
 
+  def test_dummy_sign_out_button_uses_href
+    helper_source = File.read(File.expand_path("dummy/app/helpers/application_helper.rb", __dir__))
+
+    assert_includes helper_source, "href: main_app.destroy_user_session_path"
+    refute_includes helper_source, "url: main_app.destroy_user_session_path"
+    assert_includes helper_source, "data: { turbo_method: :delete }"
+  end
+
   def test_engine_does_not_ship_a_home_view
     view_path = File.expand_path("../app/views/gem_template/home/index.html.erb", __dir__)
 
