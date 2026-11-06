@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-11-06
+
 ### Changed
+- Root and dummy lockfiles: Rails `8.1.3.1` → `8.1.4.1`, with `rack` `>= 3.2.8`, `nokogiri` `>= 1.19.5`, `loofah` `>= 2.25.3`, and `rails-html-sanitizer` `>= 1.7.2`.
+- Require Ruby `>= 3.3.13` (`.ruby-version` and dummy follow).
 - Dummy Sign out `FlatPack::Button` now uses `href:` instead of `url:` so the page nav is a real link with `data-turbo-method="delete"` (FlatPack ≥ 0.1.177).
-- Bump dummy/root GitHub pin for Recording Studio `v4.2.0` → `v4.2.2`. Gemspec stays `~> 4.2`. FlatPack and other RecordingStudio* addon tags unchanged.
 
 ## [0.2.2] - 2026-09-11
 
@@ -94,7 +97,8 @@ New addons copied from this template are born on Recording Studio 4.x.
 - Comprehensive README and documentation
 - Basic test suite with Minitest
 
-[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_gem_template/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/bowerbird-app/RecordingStudio_gem_template/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/bowerbird-app/RecordingStudio_gem_template/releases/tag/v0.2.3
 [0.2.2]: https://github.com/bowerbird-app/RecordingStudio_gem_template/releases/tag/v0.2.2
 [0.2.1]: https://github.com/bowerbird-app/RecordingStudio_gem_template/releases/tag/v0.2.1
 [0.2.0]: https://github.com/bowerbird-app/RecordingStudio_gem_template/releases/tag/v0.2.0

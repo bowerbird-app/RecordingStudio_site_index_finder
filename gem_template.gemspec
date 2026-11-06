@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.description = "An internal template for building Recording Studio addons with Rails 8.1, " \
                      "UUID-backed PostgreSQL models, TailwindCSS, and GitHub Codespaces support"
   spec.license     = "MIT"
-  spec.required_ruby_version = ">= 3.3.0"
+  spec.required_ruby_version = ">= 3.3.13"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/bowerbird-app/RecordingStudio_gem_template"
